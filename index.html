@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ta">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP8266 Remote Control</title>
+    <title>ESP8266 Control Panel</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,29 +12,35 @@
             color: #ffffff;
             padding: 40px 20px;
         }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
         .card {
             background: #16213e;
-            padding: 30px;
+            padding: 25px;
             border-radius: 15px;
-            display: inline-block;
             box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-            max-width: 400px;
-            width: 100%;
+            width: 300px;
+            margin: 10px;
         }
         h2 { color: #00fff5; margin-bottom: 5px; }
+        h3 { color: #e94560; margin-bottom: 15px; }
         p { color: #a2a8d3; }
         .status-box {
-            font-size: 18px;
-            margin: 20px 0;
+            font-size: 16px;
+            margin: 15px 0;
             padding: 10px;
             background: #0f3460;
             border-radius: 8px;
         }
         button {
-            padding: 12px 25px;
-            font-size: 16px;
+            padding: 10px 20px;
+            font-size: 15px;
             font-weight: bold;
-            margin: 10px;
+            margin: 8px;
             cursor: pointer;
             border: none;
             border-radius: 8px;
@@ -48,47 +54,72 @@
 </head>
 <body>
 
-    <div class="card">
-        <h2>ESP8266 Remote Control</h2>
-        <p>Blynk IoT Dashboard</p>
-        
-        <div class="status-box">
-            நிலை (Status): <strong id="pinStatus">சரிபார்க்கிறது...</strong>
+    <h2>ESP8266 Remote Control Panel</h2>
+    <p>Blynk IoT Web Dashboard</p>
+
+    <div class="container">
+        <!-- Light Control Card -->
+        <div class="card">
+            <h3>Light Control</h3>
+            <div class="status-box">
+                Status: <strong id="lightStatus">Checking...</strong>
+            </div>
+            <button class="btn-on" onclick="controlDevice(LIGHT_CONTROL_PIN, 1, LIGHT_STATUS_PIN, 'lightStatus')">ON</button>
+            <button class="btn-off" onclick="controlDevice(LIGHT_CONTROL_PIN, 0, LIGHT_STATUS_PIN, 'lightStatus')">OFF</button>
         </div>
-        
-        <button class="btn-on" onclick="controlRelay(1)">ON</button>
-        <button class="btn-off" onclick="controlRelay(0)">OFF</button>
+
+        <!-- Buzzer Control Card -->
+        <div class="card">
+            <h3>Buzzer Control</h3>
+            <div class="status-box">
+                Status: <strong id="buzzerStatus">Checking...</strong>
+            </div>
+            <button class="btn-on" onclick="controlDevice(BUZZER_CONTROL_PIN, 1, BUZZER_STATUS_PIN, 'buzzerStatus')">ON</button>
+            <button class="btn-off" onclick="controlDevice(BUZZER_CONTROL_PIN, 0, BUZZER_STATUS_PIN, 'buzzerStatus')">OFF</button>
+        </div>
     </div>
 
     <script>
         const AUTH_TOKEN = 'Jk0S_2J5BMkXFVLvjUSJq6XufxZHQdjH';
-        const VIRTUAL_PIN = 'V0';
+        
+        // Pins configuration
+        const LIGHT_CONTROL_PIN = 'V0';
+        const BUZZER_CONTROL_PIN = 'V1';
+        const LIGHT_STATUS_PIN = 'V2';
+        const BUZZER_STATUS_PIN = 'V3';
 
-        function controlRelay(value) {
-            const url = `https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${VIRTUAL_PIN}=${value}`;
+        function controlDevice(controlPin, value, statusPin, elementId) {
+            const url = `https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${controlPin}=${value}`;
             fetch(url)
                 .then(response => {
                     if (response.ok) {
-                        document.getElementById('pinStatus').innerText = value === 1 ? 'ON' : 'OFF';
+                        setTimeout(() => getStatus(statusPin, elementId), 500);
                     }
                 })
                 .catch(error => console.error('Error:', error));
         }
 
-        function getStatus() {
-            const url = `https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${VIRTUAL_PIN}`;
+        function getStatus(statusPin, elementId) {
+            const url = `https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${statusPin}`;
             fetch(url)
                 .then(response => response.text())
                 .then(data => {
-                    document.getElementById('pinStatus').innerText = data.trim() === '1' ? 'ON' : 'OFF';
+                    document.getElementById(elementId).innerText = data.trim() === '1' ? 'ON' : 'OFF';
                 })
                 .catch(() => {
-                    document.getElementById('pinStatus').innerText = 'இணைக்க முடியவில்லை';
+                    document.getElementById(elementId).innerText = 'Disconnected';
                 });
         }
 
-        // பக்கம் திறந்தவுடன் நிலையை புதுப்பிக்க
-        getStatus();
+        // Fetch status every 3 seconds automatically
+        setInterval(() => {
+            getStatus(LIGHT_STATUS_PIN, 'lightStatus');
+            getStatus(BUZZER_STATUS_PIN, 'buzzerStatus');
+        }, 3000);
+
+        // Initial check
+        getStatus(LIGHT_STATUS_PIN, 'lightStatus');
+        getStatus(BUZZER_STATUS_PIN, 'buzzerStatus');
     </script>
 
 </body>
